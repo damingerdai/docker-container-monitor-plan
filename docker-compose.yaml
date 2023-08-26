@@ -1,0 +1,52 @@
+version: "3"
+services:
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    extra_hosts:
+      - host.docker.internal:host-gateway
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - cadvisor
+    networks:
+      - docker-container-monitor-plan-network
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.1 # m1/m2 mac
+    container_name: cadvisor
+    volumes:
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+    ports:
+      - 8080:8080
+    networks:
+      - docker-container-monitor-plan-network
+    privileged: true # stops oom warning
+    platform: linux/aarch64 # m1/m2 mac
+    devices:
+      - /dev/kmsg:/dev/kmsg
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - 6379:6379
+networks:
+  docker-container-monitor-plan-network:
+volumes:
+  grafana-storage:
+    external: true
